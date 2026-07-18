@@ -2,7 +2,7 @@ mod internals;
 mod phases;
 use clap::{Parser, Subcommand};
 use internals::objects;
-use std::process::ExitCode;
+use std::{process::ExitCode, string};
 
 #[derive(Parser)]
 #[command(name = "git", version, about = "A simplified version control system")]
@@ -45,8 +45,8 @@ enum Commands {
     },
 
     Object {
-        #[command(subcommand)]
-        command: ObjectCommands,
+        #[arg(short = 'c', long)]
+        create: String,
     },
 }
 
@@ -75,14 +75,9 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Commands::Init => phases::init::check_dir(),
-        Commands::Object { command } => match command {
-            ObjectCommands::Create { path } => match objects::create(path) {
-                Ok(()) => ExitCode::SUCCESS,
-                Err(err) => {
-                    eprintln!("Failed to create object: {}", err);
-                    ExitCode::FAILURE
-                }
-            },
-        },
+        Commands::Object { create } => {
+            internals::objects::create(create);
+            ExitCode::SUCCESS
+        }
     }
 }

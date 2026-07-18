@@ -1,3 +1,4 @@
+use const_hex;
 use sha1::{Digest, Sha1};
 use std::vec::Vec;
 use std::{
@@ -19,6 +20,7 @@ enum FileType {
     Regular,
 }
 
+//TODO: Deal with directory case.
 pub fn create(path: &str) -> std::io::Result<()> {
     //Determine whether it is a tree or a blob.
 
@@ -39,10 +41,10 @@ pub fn create(path: &str) -> std::io::Result<()> {
 
     let mut hasher = Sha1::new();
     hasher.update(&object_data);
-    let hash = hasher.finalize();
-    println!("{:?}", hash);
+    let hash_array: [u8; 20] = hasher.finalize().into();
+    let hex_hash = const_hex::encode(hash_array);
 
-    // println!("{}", sha1::digest());
+    println!("Printing object hex_hash: {}", hex_hash);
 
     Ok(())
 }
