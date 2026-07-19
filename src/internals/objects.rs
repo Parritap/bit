@@ -37,6 +37,7 @@ pub fn create(path: &str) -> Result<()> {
     }
 }
 
+// TODO: I need a function to retrieve the relative path of the .bit redirectory.
 fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     // Computate the hash based on the header and its the reg-file's content
     let size = metadata.size();
