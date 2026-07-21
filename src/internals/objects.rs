@@ -1,18 +1,13 @@
 use crate::utils::path;
-use crate::utils::path::find_bit_dir;
-use const_hex::{self, encode};
+use const_hex;
 use flate2::Compression;
 use flate2::write::GzEncoder;
-use serde::de::Error;
-use sha1::digest::typenum::bit;
 use sha1::{Digest, Sha1};
-use std::fmt::format;
 use std::io::{Result, Write};
-use std::path::PathBuf;
 use std::vec::Vec;
 use std::{
     fs::{File, Metadata},
-    io::{Read, copy},
+    io::Read,
     os::unix::fs::MetadataExt,
 };
 use strum_macros::{Display, IntoStaticStr};
@@ -65,7 +60,7 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     // Now lets check if a dir with that hash is already save in the database
     let tail: String = hex_hash.split_off(2);
     println!("{hex_hash}, {tail}");
-    let bit_dir = find_bit_dir().ok_or_else(|| {
+    let bit_dir = path::find_bit_dir().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "could not find .bit directory",
@@ -84,13 +79,19 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     Ok(())
 }
 
-fn create_dir_obj(path: &str, metadata: Metadata) -> Result<()> {
+fn create_dir_obj(_path: &str, _metadata: Metadata) -> Result<()> {
     // TODO:
+    let _ = FileType::Dir;
     Ok(())
 }
 
-pub fn cat_object(hash_str: &str) -> Result<(), String> {
+pub fn cat_object(hash_str: &str) -> Result<()> {
     // Do a search with the objects directory
+
+ path::find_bit_dir().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "Bit repo not found")
+    })?;
+
     let bit_dir = path::find_bit_dir();
     if let Some(None) = bit_dir {
         return Err("Bit repo not found");

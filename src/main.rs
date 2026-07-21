@@ -4,8 +4,8 @@ mod utils;
 use ObjectCommands as obj_cmds;
 use clap::{Parser, Subcommand};
 use internals::objects;
-use serde::de::Error;
-use std::{process::ExitCode, string};
+use std::io;
+use std::process::ExitCode;
 
 #[derive(Parser)]
 #[command(name = "git", version, about = "A simplified version control system")]
@@ -71,7 +71,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn _main() -> Result<(), String> {
+fn _main() -> io::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -93,7 +93,7 @@ fn _main() -> Result<(), String> {
         Commands::Init => phases::init::check_dir(),
         Commands::Object { command } => match command {
             obj_cmds::Create { path } => {
-                objects::create(path);
+                objects::create(path)?;
                 Ok(())
             }
             obj_cmds::CatObject { hash } => objects::cat_object(hash),
