@@ -1,7 +1,10 @@
 mod internals;
 mod phases;
+mod utils;
+use ObjectCommands as obj_cmds;
 use clap::{Parser, Subcommand};
 use internals::objects;
+use serde::de::Error;
 use std::{process::ExitCode, string};
 
 #[derive(Parser)]
@@ -43,41 +46,57 @@ enum Commands {
         #[arg(default_value = "main")]
         branch: String,
     },
-
     Object {
-        #[arg(short = 'c', long)]
-        create: String,
+        #[command(subcommand)]
+        command: ObjectCommands,
     },
 }
 
 #[derive(Subcommand)]
 enum ObjectCommands {
+    /// Create an object from a file
     Create { path: String },
+    /// Read an object by its hash
+    #[command(name = "cat-object")]
+    CatObject { hash: String },
 }
 
 fn main() -> ExitCode {
+    match _main() {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(err) => {
+            println!("{:?}", err);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn _main() -> Result<(), String> {
     let cli = Cli::parse();
 
     match &cli.command {
         Commands::Clone { repository } => {
             println!("Cloning repository from: {}", repository);
-            ExitCode::SUCCESS
+            Ok(())
         }
         Commands::Commit { message, all } => {
             if *all {
                 println!("Staging all changes...");
             }
             println!("Creating commit with message: '{}'", message);
-            ExitCode::SUCCESS
+            Ok(())
         }
         Commands::Push { remote, branch } => {
             println!("Pushing branch '{}' to remote '{}'", branch, remote);
-            ExitCode::SUCCESS
+            Ok(())
         }
         Commands::Init => phases::init::check_dir(),
-        Commands::Object { create } => {
-            internals::objects::create(create);
-            ExitCode::SUCCESS
-        }
+        Commands::Object { command } => match command {
+            obj_cmds::Create { path } => {
+                objects::create(path);
+                Ok(())
+            }
+            obj_cmds::CatObject { hash } => objects::cat_object(hash),
+        },
     }
 }

@@ -1,8 +1,14 @@
+use crate::utils::path;
+use crate::utils::path::find_bit_dir;
 use const_hex::{self, encode};
 use flate2::Compression;
 use flate2::write::GzEncoder;
+use serde::de::Error;
+use sha1::digest::typenum::bit;
 use sha1::{Digest, Sha1};
+use std::fmt::format;
 use std::io::{Result, Write};
+use std::path::PathBuf;
 use std::vec::Vec;
 use std::{
     fs::{File, Metadata},
@@ -37,7 +43,6 @@ pub fn create(path: &str) -> Result<()> {
     }
 }
 
-// TODO: I need a function to retrieve the relative path of the .bit redirectory.
 fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     // Computate the hash based on the header and its the reg-file's content
     let size = metadata.size();
@@ -60,8 +65,16 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     // Now lets check if a dir with that hash is already save in the database
     let tail: String = hex_hash.split_off(2);
     println!("{hex_hash}, {tail}");
-    std::fs::create_dir_all(format!("./.bit/objects/{hex_hash}"))?;
-    let mut obj_file = File::create(format!("./.bit/objects/{hex_hash}/{tail}"))?;
+    let bit_dir = find_bit_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "could not find .bit directory",
+        )
+    })?;
+    let object_dir = bit_dir.join("objects").join(&hex_hash);
+
+    std::fs::create_dir_all(&object_dir)?;
+    let mut obj_file = File::create(object_dir.join(&tail))?;
 
     let mut encoder = GzEncoder::new(&mut obj_file, Compression::default());
     println!("Creating binary object");
@@ -72,6 +85,19 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
 }
 
 fn create_dir_obj(path: &str, metadata: Metadata) -> Result<()> {
-    //
+    // TODO:
+    Ok(())
+}
+
+pub fn cat_object(hash_str: &str) -> Result<(), String> {
+    // Do a search with the objects directory
+    let bit_dir = path::find_bit_dir();
+    if let Some(None) = bit_dir {
+        return Err("Bit repo not found");
+    }
+    let (head, tail) = hash_str.split_at(2);
+    //println!("head:{head}\ntail:{tail}");
+
+    let bit_path = std::fs::exists(format!(""));
     Ok(())
 }
