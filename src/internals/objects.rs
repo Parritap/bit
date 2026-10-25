@@ -1,9 +1,13 @@
 use crate::utils::path;
 use const_hex;
 use flate2::Compression;
+use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use sha1::{Digest, Sha1};
-use std::io::{Result, Write};
+use std::fmt::format;
+use std::fs;
+use std::io::{Error, ErrorKind, Result, Write};
+use std::ptr::null;
 use std::vec::Vec;
 use std::{
     fs::{File, Metadata},
@@ -45,13 +49,13 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
     let mut target_file = File::open(path)?;
     target_file.read_to_end(&mut content_buf)?; //Writes the content of file into buf.
     //in the line below, the FileType enum gets converted into a string at compile time thanks to strum_macros crate
-    let mut object_data: Vec<u8> = format!("{} {}\0", FileType::Regular, size)
+    let mut header_data: Vec<u8> = format!("{} {}\0", FileType::Regular, size)
         .as_bytes()
         .to_vec();
-    object_data.append(&mut content_buf);
+    header_data.append(&mut content_buf);
 
     let mut hasher = Sha1::new();
-    hasher.update(&object_data);
+    hasher.update(&header_data);
     let hash_array: [u8; 20] = hasher.finalize().into();
     let mut hex_hash = const_hex::encode(hash_array);
 
@@ -73,7 +77,8 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
 
     let mut encoder = GzEncoder::new(&mut obj_file, Compression::default());
     println!("Creating binary object");
-    encoder.write_all(content_buf.as_slice())?;
+    encoder.write_all(header_data.as_slice())?;
+    encoder.finish()?;
 
     // Now lets save the contents of in a compressed form inside said file.
     Ok(())
@@ -86,19 +91,40 @@ fn create_dir_obj(_path: &str, _metadata: Metadata) -> Result<()> {
 }
 
 pub fn cat_object(hash_str: &str) -> Result<()> {
-    // Do a search with the objects directory
+    // Check first if a bit directory exists
+    let bit_dir = path::find_bit_dir()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Bit repo not found"))?;
 
- path::find_bit_dir().ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::NotFound, "Bit repo not found")
-    })?;
-
-    let bit_dir = path::find_bit_dir();
-    if let Some(None) = bit_dir {
-        return Err("Bit repo not found");
-    }
+    let bit_str = bit_dir.to_str().unwrap();
+    println!("{bit_str}");
     let (head, tail) = hash_str.split_at(2);
     //println!("head:{head}\ntail:{tail}");
+    //
+    // Declare the file that will hold the value of the hash so we can uncompress it
 
-    let bit_path = std::fs::exists(format!(""));
+    let obj_file = format!("{bit_str}/objects/{head}/{tail}");
+    println!("{obj_file}");
+
+    if fs::exists(&obj_file).is_ok() {
+        print_encoded_file(obj_file.as_str())
+    } else {
+        Err(Error::new(
+            ErrorKind::NotFound,
+            "The specified object was not found",
+        ))
+    }
+}
+
+fn print_encoded_file(path: &str) -> Result<()> {
+    let obj_file = File::open(path).unwrap();
+    let mut decoder = GzDecoder::new(obj_file);
+    let mut contents = String::new();
+    decoder.read_to_string(&mut contents)?;
+
+    let null_index = contents.as_bytes().iter().position(|b| *b == 0).unwrap();
+
+    let body = contents.split_at(null_index).1;
+    println!("{body}");
+
     Ok(())
 }
