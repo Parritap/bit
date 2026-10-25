@@ -11,11 +11,11 @@ use std::process::ExitCode;
 #[command(name = "git", version, about = "A simplified version control system")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: BitCommands,
 }
 
 #[derive(Subcommand)]
-enum Commands {
+enum BitCommands {
     // Inits a bit repository
     Init,
 
@@ -75,23 +75,23 @@ fn _main() -> io::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Clone { repository } => {
+        BitCommands::Clone { repository } => {
             println!("Cloning repository from: {}", repository);
             Ok(())
         }
-        Commands::Commit { message, all } => {
+        BitCommands::Commit { message, all } => {
             if *all {
                 println!("Staging all changes...");
             }
             println!("Creating commit with message: '{}'", message);
             Ok(())
         }
-        Commands::Push { remote, branch } => {
+        BitCommands::Push { remote, branch } => {
             println!("Pushing branch '{}' to remote '{}'", branch, remote);
             Ok(())
         }
-        Commands::Init => phases::init::check_dir(),
-        Commands::Object { command } => match command {
+        BitCommands::Init => phases::init::check_dir(),
+        BitCommands::Object { command } => match command {
             obj_cmds::Create { path } => {
                 objects::create(path)?;
                 Ok(())
