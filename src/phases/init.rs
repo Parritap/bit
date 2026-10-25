@@ -4,10 +4,11 @@ use crate::utils::path;
 use std::fs;
 use std::io;
 
-const INIT_FILES: [&str; 2] = ["./.bit/index", "./.bit/HEAD"];
-const INIT_DIRS: [&str; 3] = ["./.bit", "./.bit/objects", "./.bit/refs/master"];
+const PREFIX: &str = "./.bit/";
+const INIT_DIRS: [&str; 4] = ["objects", "refs/heads/master", "hooks", "info"];
+const INIT_FILES: [&str; 2] = ["index", "HEAD"];
 
-/// check if repo exists else, inits a bit repo.
+/// check if repo exists, else, inits a bit repo.
 /// Auxiliary function ran to make sure we do not overwrite the old contents.
 pub fn check_dir() -> io::Result<()> {
     if path::find_bit_dir().is_some() {
@@ -22,11 +23,11 @@ pub fn check_dir() -> io::Result<()> {
 /// Function that instantiate the bit directory
 fn init_repo() -> io::Result<()> {
     for path in INIT_DIRS {
-        fs::create_dir_all(path)?;
+        fs::create_dir_all(format!("{PREFIX}{path}"))?;
     }
 
     for file in INIT_FILES {
-        fs::File::create(file)?;
+        fs::File::create(format!("{PREFIX}{file}"))?;
     }
 
     println!("Bit repo initiated!");
