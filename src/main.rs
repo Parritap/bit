@@ -1,3 +1,4 @@
+mod constants;
 mod internals;
 mod phases;
 mod utils;
@@ -55,7 +56,12 @@ enum BitCommands {
 #[derive(Subcommand)]
 enum ObjectCommands {
     /// Create an object from a file
-    Create { path: String },
+    #[command(name = "hash-object")]
+    Hash {
+        path: String,
+        #[arg(short = 'w', long)]
+        write: bool,
+    },
     /// Read an object by its hash
     #[command(name = "cat-object")]
     CatObject { hash: String },
@@ -92,8 +98,8 @@ fn _main() -> io::Result<()> {
         }
         BitCommands::Init => phases::init::check_dir(),
         BitCommands::Object { command } => match command {
-            obj_cmds::Create { path } => {
-                objects::create(path)?;
+            obj_cmds::Hash { path, write } => {
+                objects::process_command(path, *write)?;
                 Ok(())
             }
             obj_cmds::CatObject { hash } => objects::cat_object(hash),

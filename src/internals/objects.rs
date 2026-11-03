@@ -1,38 +1,36 @@
+use crate::constants::file_constants::BitFileType;
 use crate::utils::path;
-use const_hex;
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use sha1::{Digest, Sha1};
-use std::fmt::format;
 use std::fs;
 use std::io::{Error, ErrorKind, Result, Write};
-use std::ptr::null;
 use std::vec::Vec;
 use std::{
     fs::{File, Metadata},
     io::Read,
     os::unix::fs::MetadataExt,
 };
-use strum_macros::{Display, IntoStaticStr};
 
-/// Function that creates an object give the path of a file.
-/// It determines whether the file is regular or a directory.
-///
+pub fn process_command(path: &str, write_flag: bool) -> Result<()> {
+    //Determine whether it is a tree or a blob.
+    let metadata: Metadata = std::fs::metadata(path)?;
 
-///
-#[derive(Display, IntoStaticStr)]
-enum FileType {
-    #[strum(serialize = "tree")]
-    Dir,
-    #[strum(serialize = "blob")]
-    Regular,
+    if metadata.is_dir() {
+        create_dir_obj(path, metadata)
+    } else {
+        let (hash, header_data) = get_regfile_id(path, metadata)?;
+        //println!("{hash}");
+        if (write_flag) {
+            create_blob_obj(hash, header_data);
+        }
+        Ok(())
+    }
 }
 
 //TODO: Deal with directory case.
 pub fn create(path: &str) -> Result<()> {
-    //Determine whether it is a tree or a blob.
-
     let metadata: Metadata = std::fs::metadata(path)?;
 
     if metadata.is_dir() {
@@ -42,25 +40,28 @@ pub fn create(path: &str) -> Result<()> {
     }
 }
 
-fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
-    // Computate the hash based on the header and its the reg-file's content
+fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>)> {
+    // Compute the hash based on the header and its reg-file's content
     let size = metadata.size();
     let mut content_buf: Vec<u8> = Vec::new();
     let mut target_file = File::open(path)?;
     target_file.read_to_end(&mut content_buf)?; //Writes the content of file into buf.
-    //in the line below, the FileType enum gets converted into a string at compile time thanks to strum_macros crate
-    let mut header_data: Vec<u8> = format!("{} {}\0", FileType::Regular, size)
+    //in the line below, the BitFileType enum gets converted into a string at compile time thanks to strum_macros crate
+    let mut header_data: Vec<u8> = format!("{} {}\0", BitFileType::Regular, size)
         .as_bytes()
         .to_vec();
-    header_data.append(&mut content_buf);
-
+    header_data.append(&mut content_buf); // Raw content of the file.
+    //
+    // Get the hash
     let mut hasher = Sha1::new();
     hasher.update(&header_data);
     let hash_array: [u8; 20] = hasher.finalize().into();
-    let mut hex_hash = const_hex::encode(hash_array);
+    let hex_hash = const_hex::encode(hash_array);
 
-    println!("Printing object hex_hash: {}", hex_hash);
+    return Ok((hex_hash, header_data));
+}
 
+fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<()> {
     // Now lets check if a dir with that hash is already save in the database
     let tail: String = hex_hash.split_off(2);
     println!("{hex_hash}, {tail}");
@@ -86,7 +87,7 @@ fn create_blob_obj(path: &str, metadata: Metadata) -> Result<()> {
 
 fn create_dir_obj(_path: &str, _metadata: Metadata) -> Result<()> {
     // TODO:
-    let _ = FileType::Dir;
+    let _ = BitFileType::Dir;
     Ok(())
 }
 
