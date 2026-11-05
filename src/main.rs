@@ -77,7 +77,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn _main() -> io::Result<()> {
+fn _main() -> Result<(), io::Error> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -98,10 +98,7 @@ fn _main() -> io::Result<()> {
         }
         BitCommands::Init => phases::init::check_dir(),
         BitCommands::Object { command } => match command {
-            obj_cmds::Hash { path, write } => {
-                objects::process_command(path, *write)?;
-                Ok(())
-            }
+            obj_cmds::Hash { path, write } => objects::process_command(path, *write),
             obj_cmds::CatObject { hash } => objects::cat_object(hash),
         },
     }

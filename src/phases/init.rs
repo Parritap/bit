@@ -3,6 +3,7 @@
 use crate::utils::path;
 use std::fs;
 use std::io;
+use std::io::Error;
 
 const PREFIX: &str = "./.bit/";
 const INIT_DIRS: [&str; 4] = ["objects", "refs/heads/master", "hooks", "info"];
@@ -10,14 +11,13 @@ const INIT_FILES: [&str; 2] = ["index", "HEAD"];
 
 /// check if repo exists, else, inits a bit repo.
 /// Auxiliary function ran to make sure we do not overwrite the old contents.
-pub fn check_dir() -> io::Result<()> {
+pub fn check_dir() -> Result<(), Error> {
     if path::find_bit_dir().is_some() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
             "There is already a bit repository",
         ));
     }
-
     init_repo()
 }
 /// Function that instantiate the bit directory

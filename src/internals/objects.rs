@@ -5,15 +5,16 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use sha1::{Digest, Sha1};
 use std::fs;
-use std::io::{Error, ErrorKind, Result, Write};
+use std::io::{Error, ErrorKind, Write};
 use std::vec::Vec;
 use std::{
     fs::{File, Metadata},
+    io,
     io::Read,
     os::unix::fs::MetadataExt,
 };
 
-pub fn process_command(path: &str, write_flag: bool) -> Result<()> {
+pub fn process_command(path: &str, write_flag: bool) -> Result<(), Error> {
     //Determine whether it is a tree or a blob.
     let metadata: Metadata = std::fs::metadata(path)?;
 
@@ -30,7 +31,7 @@ pub fn process_command(path: &str, write_flag: bool) -> Result<()> {
 }
 
 //TODO: Deal with directory case.
-pub fn create(path: &str) -> Result<()> {
+pub fn create(path: &str) -> Result<(), Error> {
     let metadata: Metadata = std::fs::metadata(path)?;
 
     if metadata.is_dir() {
@@ -40,7 +41,7 @@ pub fn create(path: &str) -> Result<()> {
     }
 }
 
-fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>)> {
+fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>), Error> {
     // Compute the hash based on the header and its reg-file's content
     let size = metadata.size();
     let mut content_buf: Vec<u8> = Vec::new();
@@ -61,7 +62,7 @@ fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>)> {
     return Ok((hex_hash, header_data));
 }
 
-fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<()> {
+fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<(), Error> {
     // Now lets check if a dir with that hash is already save in the database
     let tail: String = hex_hash.split_off(2);
     println!("{hex_hash}, {tail}");
@@ -85,13 +86,13 @@ fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-fn create_dir_obj(_path: &str, _metadata: Metadata) -> Result<()> {
+fn create_dir_obj(_path: &str, _metadata: Metadata) -> io::Result<()> {
     // TODO:
     let _ = BitFileType::Dir;
     Ok(())
 }
 
-pub fn cat_object(hash_str: &str) -> Result<()> {
+pub fn cat_object(hash_str: &str) -> Result<(), Error> {
     // Check first if a bit directory exists
     let bit_dir = path::find_bit_dir()
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Bit repo not found"))?;
@@ -107,7 +108,8 @@ pub fn cat_object(hash_str: &str) -> Result<()> {
     println!("{obj_file}");
 
     if fs::exists(&obj_file).is_ok() {
-        print_encoded_file(obj_file.as_str())
+        print_encoded_file(obj_file.as_str());
+        Ok(())
     } else {
         Err(Error::new(
             ErrorKind::NotFound,
@@ -116,7 +118,7 @@ pub fn cat_object(hash_str: &str) -> Result<()> {
     }
 }
 
-fn print_encoded_file(path: &str) -> Result<()> {
+fn print_encoded_file(path: &str) -> Result<(), Error> {
     let obj_file = File::open(path).unwrap();
     let mut decoder = GzDecoder::new(obj_file);
     let mut contents = String::new();
