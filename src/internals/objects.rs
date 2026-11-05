@@ -49,7 +49,7 @@ fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>), E
     let mut target_file = File::open(path)?;
     target_file.read_to_end(&mut content_buf)?; //Writes the content of file into buf.
     //in the line below, the BitFileType enum gets converted into a string at compile time thanks to strum_macros crate
-    let mut header_data: Vec<u8> = format!("{} {}\0", BitFileType::Regular, size)
+    let mut header_data: Vec<u8> = format!("{} {}\0", BitFileType::Regular.as_str(), size)
         .as_bytes()
         .to_vec();
     header_data.append(&mut content_buf); // Raw content of the file.
