@@ -21,25 +21,26 @@ pub fn process_command(path: &str, write_flag: bool) -> Result<(), Error> {
     if metadata.is_dir() {
         create_dir_obj(path, metadata)
     } else {
-        let (hash, header_data) = get_regfile_id(path, metadata)?;
+        let (mut hash, header_data) = get_regfile_id(path, metadata)?;
         //println!("{hash}");
-        if (write_flag) {
-            create_blob_obj(hash, header_data);
+        if write_flag {
+            create_blob_obj(&mut hash, header_data)
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 }
 
 //TODO: Deal with directory case.
-pub fn create(path: &str) -> Result<(), Error> {
-    let metadata: Metadata = std::fs::metadata(path)?;
-
-    if metadata.is_dir() {
-        create_dir_obj(path, metadata)
-    } else {
-        create_blob_obj(path, metadata)
-    }
-}
+//pub fn create(path: &str) -> Result<(), Error> {
+//    let metadata: Metadata = std::fs::metadata(path)?;
+//
+//    if metadata.is_dir() {
+//        create_dir_obj(path, metadata)
+//    } else {
+//        create_blob_obj(&mut path.into(), metadata)
+//    }
+//}
 
 fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>), Error> {
     // Compute the hash based on the header and its reg-file's content
@@ -92,34 +93,34 @@ fn create_dir_obj(_path: &str, _metadata: Metadata) -> io::Result<()> {
     Ok(())
 }
 
-pub fn cat_object(hash_str: &str) -> Result<(), Error> {
+pub fn cat_object(hash_str: &str, print: bool) -> Result<(), Error> {
     // Check first if a bit directory exists
     let bit_dir = path::find_bit_dir()
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Bit repo not found"))?;
 
     let bit_str = bit_dir.to_str().unwrap();
-    println!("{bit_str}");
-    let (head, tail) = hash_str.split_at(2);
-    //println!("head:{head}\ntail:{tail}");
-    //
-    // Declare the file that will hold the value of the hash so we can uncompress it
+    //println!("{bit_str}");
+    let (head, tail) = hash_str
+        .split_at_checked(2)
+        .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "The passed hash is not valid."))?;
 
     let obj_file = format!("{bit_str}/objects/{head}/{tail}");
-    println!("{obj_file}");
+    //println!("{obj_file}");
 
-    if fs::exists(&obj_file).is_ok() {
-        print_encoded_file(obj_file.as_str());
-        Ok(())
-    } else {
-        Err(Error::new(
+    if !fs::exists(&obj_file)? {
+        return Err(Error::new(
             ErrorKind::NotFound,
             "The specified object was not found",
-        ))
+        ));
     }
+    if print {
+        print_encoded_file(obj_file.as_str())?;
+    }
+    Ok(())
 }
 
 fn print_encoded_file(path: &str) -> Result<(), Error> {
-    let obj_file = File::open(path).unwrap();
+    let obj_file = File::open(path)?;
     let mut decoder = GzDecoder::new(obj_file);
     let mut contents = String::new();
     decoder.read_to_string(&mut contents)?;

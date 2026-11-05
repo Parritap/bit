@@ -47,9 +47,15 @@ enum BitCommands {
         #[arg(default_value = "main")]
         branch: String,
     },
-    Object {
-        #[command(subcommand)]
-        command: ObjectCommands,
+    HashObject {
+        path: String,
+        #[arg(short = 'w', long)]
+        write: bool,
+    },
+    CatFile {
+        hash: String,
+        #[arg(short = 'p')]
+        print: bool,
     },
 }
 
@@ -57,11 +63,7 @@ enum BitCommands {
 enum ObjectCommands {
     /// Create an object from a file
     #[command(name = "hash-object")]
-    Hash {
-        path: String,
-        #[arg(short = 'w', long)]
-        write: bool,
-    },
+    Hash {},
     /// Read an object by its hash
     #[command(name = "cat-object")]
     CatObject { hash: String },
@@ -97,9 +99,9 @@ fn _main() -> Result<(), io::Error> {
             Ok(())
         }
         BitCommands::Init => phases::init::check_dir(),
-        BitCommands::Object { command } => match command {
-            obj_cmds::Hash { path, write } => objects::process_command(path, *write),
-            obj_cmds::CatObject { hash } => objects::cat_object(hash),
-        },
+
+        BitCommands::HashObject { path, write } => objects::process_command(path, *write),
+
+        BitCommands::CatFile { hash, print } => objects::cat_object(hash, *print),
     }
 }
