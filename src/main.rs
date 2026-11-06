@@ -2,7 +2,6 @@ mod constants;
 mod internals;
 mod phases;
 mod utils;
-use ObjectCommands as obj_cmds;
 use clap::{Parser, Subcommand};
 use internals::objects;
 use std::io;
@@ -57,16 +56,6 @@ enum BitCommands {
         #[arg(short = 'p')]
         print: bool,
     },
-}
-
-#[derive(Subcommand)]
-enum ObjectCommands {
-    /// Create an object from a file
-    #[command(name = "hash-object")]
-    Hash {},
-    /// Read an object by its hash
-    #[command(name = "cat-object")]
-    CatObject { hash: String },
 }
 
 fn main() -> ExitCode {

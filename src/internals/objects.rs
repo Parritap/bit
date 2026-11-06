@@ -31,17 +31,7 @@ pub fn process_command(path: &str, write_flag: bool) -> Result<(), Error> {
     }
 }
 
-//TODO: Deal with directory case.
-//pub fn create(path: &str) -> Result<(), Error> {
-//    let metadata: Metadata = std::fs::metadata(path)?;
-//
-//    if metadata.is_dir() {
-//        create_dir_obj(path, metadata)
-//    } else {
-//        create_blob_obj(&mut path.into(), metadata)
-//    }
-//}
-
+/// Gets the string form of Sha1 of the given file
 fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>), Error> {
     // Compute the hash based on the header and its reg-file's content
     let size = metadata.size();
@@ -63,6 +53,8 @@ fn get_regfile_id(path: &str, metadata: Metadata) -> Result<(String, Vec<u8>), E
     return Ok((hex_hash, header_data));
 }
 
+/// Based on the given hash and the metadata of the file, gets its binary that will be stored in
+/// within the .bit/objects directory.
 fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<(), Error> {
     // Now lets check if a dir with that hash is already save in the database
     let tail: String = hex_hash.split_off(2);
@@ -79,11 +71,11 @@ fn create_blob_obj(hex_hash: &mut String, header_data: Vec<u8>) -> Result<(), Er
     let mut obj_file = File::create(object_dir.join(&tail))?;
 
     let mut encoder = GzEncoder::new(&mut obj_file, Compression::default());
-    println!("Creating binary object");
     encoder.write_all(header_data.as_slice())?;
     encoder.finish()?;
 
     // Now lets save the contents of in a compressed form inside said file.
+
     Ok(())
 }
 
