@@ -3,6 +3,7 @@ mod internals;
 mod phases;
 mod utils;
 use clap::{Parser, Subcommand};
+use internals::index;
 use internals::objects;
 use std::io;
 use std::process::ExitCode;
@@ -24,6 +25,8 @@ enum BitCommands {
         /// The repository URL to clone (Positional)
         repository: String,
     },
+
+    Status,
 
     /// Record changes to the repository
     Commit {
@@ -92,5 +95,7 @@ fn _main() -> Result<(), io::Error> {
         BitCommands::HashObject { path, write } => objects::process_command(path, *write),
 
         BitCommands::CatFile { hash, print } => objects::cat_object(hash, *print),
+
+        BitCommands::Status {} => index::populate_index(),
     }
 }
